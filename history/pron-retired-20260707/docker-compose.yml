@@ -1,0 +1,18 @@
+services:
+  pron:
+    build:
+      context: /opt/libretexts/pron/src
+      dockerfile: Dockerfile
+    image: pron:local
+    container_name: pron
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      PRON_ENGINE_MODEL_DIR: /opt/libretexts/pron/model/wav2vec2-xlsr-53-espeak-ct2
+      PRON_RECORDS_DIR: /opt/libretexts/pron/records
+      PRON_ALLOWED_ORIGIN: https://adapt.libretexts.dev
+    volumes:
+      - /opt/libretexts/pron/model:/opt/libretexts/pron/model:ro
+      - /opt/libretexts/pron/records:/opt/libretexts/pron/records:ro

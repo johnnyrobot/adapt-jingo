@@ -1,0 +1,15 @@
+services:
+  jingo-tts:
+    build: .
+    image: jingo-tts:local
+    container_name: jingo-tts
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8010:8010"
+    environment:
+      PIPER_VOICE_DIR: /opt/libretexts/tts/voices
+      TTS_CACHE_DIR: /opt/libretexts/tts/cache
+      TTS_ALLOWED_ORIGIN: https://adapt.libretexts.dev
+    volumes:
+      - ./voices:/opt/libretexts/tts/voices:ro
+      - ./cache:/opt/libretexts/tts/cache
