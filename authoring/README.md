@@ -19,22 +19,28 @@ toolchain there and there shouldn't be.
 
 ## Environment setup
 
-Use the `johnny-lingo-v2` venv (or any Python 3.10+ venv), and install the
-engine's optional G2P extra:
+Use any Python 3.10+ venv, and install the engine's optional G2P extra:
 
 ```bash
 pip install 'jingo_engine[g2p]'
 ```
 
 This pulls in `phonemizer` and `espeakng-loader` so `jingo_engine.contract`
-can call out to `espeak-ng` under the hood. If you're working directly out
-of a `johnny-lingo-v2` checkout instead of an installed package, the
-equivalent manual setup is:
+can call out to `espeak-ng` under the hood.
+
+You don't need to install `jingo_engine` itself — the scripts here fall back to
+this repo's vendored copy at `engine/src`, so a clean clone works as-is. The
+G2P dependencies are the only pip requirement:
 
 ```bash
 pip install phonemizer espeakng-loader
-# then make sure engine/src is on PYTHONPATH, e.g.:
-export PYTHONPATH="$HOME/code/johnny-lingo-v2/engine/src:$PYTHONPATH"
+```
+
+To build against a different engine checkout instead of the vendored one, point
+`JINGO_ENGINE_SRC` at its `engine/src` directory:
+
+```bash
+export JINGO_ENGINE_SRC=/path/to/other-checkout/engine/src
 ```
 
 ## Workflow: word list -> phonetics record -> pack

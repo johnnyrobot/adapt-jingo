@@ -2,13 +2,22 @@
 phrases) and reference them in the Unit 1 exam ("Examen Unidad 1"). Phonetics
 records are G2P-generated via jingo_engine (same path build_pack.py uses).
 
-Run with the johnny-lingo-v2 venv:
-  .venv/bin/python augment_spanish_pack.py <in_pack.json> <out_pack.json>
+Run with any Python 3.10+ venv that has jingo_engine's G2P extras available:
+  python augment_spanish_pack.py <in_pack.json> <out_pack.json>
+
+jingo_engine is resolved from this repo's vendored engine/src. Set
+JINGO_ENGINE_SRC to use a different checkout.
 """
 import json
+import os
 import sys
+from pathlib import Path
 
-sys.path.insert(0, "/Users/johnnyrobot/code/johnny-lingo-v2/engine/src")
+ENGINE_SRC = os.environ.get(
+    "JINGO_ENGINE_SRC",
+    str(Path(__file__).resolve().parent.parent / "engine" / "src"),
+)
+sys.path.insert(0, ENGINE_SRC)
 from jingo_engine import DEFAULT_VOCAB_PATH
 from jingo_engine.contract import get_g2p, phonetics_for
 

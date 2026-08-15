@@ -14,8 +14,8 @@ Input formats (one entry per line):
     word                     # id auto-derived: es-w-<ascii-slug>
     exercise_id<TAB>word     # explicit id
 
-Usage (with the johnny-lingo-v2 venv that has jingo_engine[g2p]):
-    .venv/bin/python gen_word_records.py --words words.txt --out ./out --lang es
+Usage (in a venv with jingo_engine's G2P extras available):
+    python gen_word_records.py --words words.txt --out ./out --lang es
 """
 import argparse
 import json
@@ -23,10 +23,14 @@ import os
 import re
 import sys
 import unicodedata
+from pathlib import Path
 
-# jingo_engine lives in the johnny-lingo-v2 engine source tree.
-ENGINE_SRC = os.environ.get("JINGO_ENGINE_SRC",
-                            "/Users/johnnyrobot/code/johnny-lingo-v2/engine/src")
+# jingo_engine is resolved from this repo's vendored engine/src; set
+# JINGO_ENGINE_SRC to use a different checkout.
+ENGINE_SRC = os.environ.get(
+    "JINGO_ENGINE_SRC",
+    str(Path(__file__).resolve().parent.parent / "engine" / "src"),
+)
 sys.path.insert(0, ENGINE_SRC)
 from jingo_engine import DEFAULT_VOCAB_PATH            # noqa: E402
 from jingo_engine.contract import get_g2p, phonetics_for  # noqa: E402

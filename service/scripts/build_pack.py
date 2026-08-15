@@ -1,21 +1,31 @@
 """Build a content pack with embedded phonetics records.
 
-Run on the Mac with the johnny-lingo-v2 venv (which has jingo_engine[g2p]):
-  /Users/johnnyrobot/code/johnny-lingo-v2/.venv/bin/python \\
-      -c "import sys; sys.path.insert(0, 'engine/src')" \\
-      service/scripts/build_pack.py --language es --out service/packs/spanish-1.json
+Run in a venv with jingo_engine's G2P extras available:
+  python service/scripts/build_pack.py --language es --out service/packs/spanish-1.json
 
-G2P (phonemizer + espeakng-loader) runs here ONLY. The box never runs this script.
+jingo_engine is resolved from this repo's vendored engine/src. Set
+JINGO_ENGINE_SRC to use a different checkout.
+
+G2P (phonemizer + espeakng-loader) requires espeak and so runs on a workstation
+only — the deployment host never runs this script.
 
 Dev/demo content only. No clinical validity, channel-independent thresholds, or
 human-label validation is claimed for these packs.
 """
 import argparse
 import json
+import os
+import sys
 from pathlib import Path
 
-from jingo_engine import DEFAULT_VOCAB_PATH
-from jingo_engine.contract import get_g2p, phonetics_for
+ENGINE_SRC = os.environ.get(
+    "JINGO_ENGINE_SRC",
+    str(Path(__file__).resolve().parent.parent.parent / "engine" / "src"),
+)
+sys.path.insert(0, ENGINE_SRC)
+
+from jingo_engine import DEFAULT_VOCAB_PATH  # noqa: E402
+from jingo_engine.contract import get_g2p, phonetics_for  # noqa: E402
 
 
 # ---- v1 content: Spanish Unit 1 + French Unit 1 (one unit each) -------------
