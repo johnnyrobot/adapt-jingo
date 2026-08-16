@@ -1,5 +1,10 @@
 # adapt-jingo
 
+**Deploying this?** Start with [`DEPLOY.md`](DEPLOY.md) — the three deliverables,
+the order to stand them up in, and five failure modes that produce no error.
+Licensing is in [`THIRD-PARTY.md`](THIRD-PARTY.md); the scorer's own detailed
+walkthrough is [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
+
 **jingo** is the pronunciation-assessment engine used by [ADAPT](https://adapt.libretexts.org)'s
 `pronunciation` question type. It scores a learner's spoken-audio submission against a
 reference pronunciation at the phoneme level and reports the result back to ADAPT's
