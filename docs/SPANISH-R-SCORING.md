@@ -144,3 +144,40 @@ docker compose up -d --no-build --no-deps jingo
 
 This restores the prior runtime image; the source checkout still contains the
 fix. Do not rebuild from that checkout when intending to remain rolled back.
+
+## Rolled-R scoring follow-up deployment
+
+Deployed on 2026-09-08 from commit `97a66c7`; engine/package `0.2.3`,
+calibration `v1.3-strict-rr-2026.09`. The running image is
+`jingo:release-97a66c7` (also `jingo:local`), ID
+`sha256:b06379f5d6019c48813bdadbd4c2d43e1a402ef06d559163ab1bec5476167a13`.
+The source archive and Dockerfile are at
+`/opt/libretexts/jingo/releases/97a66c7/`.
+
+Only `calibration.py`, `assets/calibration-v1.json`, the engine version and
+package metadata changed inside the image. Service code, other engine files
+and dependency versions were compared against the previous image and matched.
+Runtime environment values, mounts, ports and networks were preserved.
+The host checkout received the matching calibration, engine version and
+package version updates while preserving unrelated overrides.
+
+All 60 engine/service tests passed. Public `/practice-score` for the cached
+aburrirse exemplar returned `r: {score: 100, reliable: true, abstain: false,
+band: 78}`; the beta phone still abstained. The mean of the returned actionable
+scores matched the overall score. All six exemplars retained the earlier
+single-R scores and overall results. These checks validate enabling the score,
+not its accuracy for human speakers. A startup readiness probe initially
+triggered rollback on a connection reset; deployment completed after using
+readiness retries that allow the server time to start.
+
+To restore the previous rolled-R abstention policy while retaining the
+single-R fix:
+
+```sh
+docker tag jingo:rollback-20260908-pre-rr-97a66c7 jingo:local
+cd /opt/libretexts/jingo
+docker compose up -d --no-build --no-deps jingo
+```
+
+For a future rebuilt release, set `uncertainty.wide_band_score_phones` to `[]`
+to restore abstention without changing the recorded uncertainty evidence.
