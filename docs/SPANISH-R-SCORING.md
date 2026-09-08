@@ -2,6 +2,15 @@
 
 Status: deployed and verified on 2026-09-08. No model training performed.
 
+Follow-up on 2026-09-08: the owner requested numeric rolled-R scores as well.
+Engine 0.2.3 / calibration `v1.3-strict-rr-2026.09` enables `r` through
+`uncertainty.wide_band_score_phones`. This overrides only wide-band abstention
+for that phone, preserving the measured band of 78, the existing scoring curve,
+and the provisional flag. Quarantine and insufficient-frame checks still
+abstain. The actual rolled-R score now counts in overall, word and tag
+aggregates; it is not set to a fixed score. Historical references below to a
+blank rolled-R score describe the initial 0.2.2 deployment.
+
 The six practice widgets on [Verbos reflexivos con emociones](https://library.libretexts.dev/Books/Chevere_Introductory_Spanish_II/02%3A_Mente_sana_en_cuerpo_sano/2.07%3A_Verbos_reflexivos_con_emociones/)
 penalized their own cached Hear-it exemplars at the R before `-se`.
 

@@ -1,7 +1,8 @@
 {
-  "calibration_version": "v1.2-strict-2026.07",
+  "calibration_version": "v1.3-strict-rr-2026.09",
   "provisional": true,
   "notes": [
+    "2026-09-08 v1.3: operator enabled numeric rolled-R (r) scoring and aggregation despite its wide native band. Evidence, model and curve are unchanged; scores remain provisional. Remove r from uncertainty.wide_band_score_phones to restore abstention.",
     "2026-07-08 v1.2: curve tightened -3.0/1.3 -> -2.0/1.5 (STRICT) per operator request + the real-audio 'low end too lenient' finding below. A mildly-off phone now scores ~86 (was 95), clearly-off ~52 (was 80), quite-wrong ~19 (was 51). Reversible: restore midpoint -3.0 / slope 1.3.",
     "ALL VALUES PROVISIONAL; v1 will ship without tutor ratings as a quiet-safe scorer.",
     "curve: normalized-logistic ratio->0-100 mapping fit on the synthetic-TTS proxy (Phase 5).",
@@ -27,6 +28,7 @@
     "min_band": 5.0,
     "default_band": 35.0,
     "max_abstain_band": 45.0,
+    "wide_band_score_phones": ["r"],
     "min_native_observations": 8,
     "min_frames": 1,
     "sources": [

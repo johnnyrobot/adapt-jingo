@@ -42,6 +42,8 @@ class UncertaintyConfig:
     min_native_observations: int
     min_frames: int
     phone_bands: dict[str, PhoneUncertaintyBand]
+    # Explicit display/aggregation policy; never changes measured uncertainty.
+    wide_band_score_phones: frozenset[str] = frozenset()
 
 
 @dataclass(frozen=True)
@@ -96,8 +98,11 @@ class Calibration:
             abstain = True
             reason = "too_few_frames"
         elif band > cfg.max_abstain_band:
-            abstain = True
-            reason = "wide_native_band"
+            if _phone_base(phone) in cfg.wide_band_score_phones:
+                reason = "wide_native_band_scoring_enabled"
+            else:
+                abstain = True
+                reason = "wide_native_band"
 
         score_f = float(score)
         return {
@@ -161,6 +166,9 @@ def _load_uncertainty(raw: dict | None) -> UncertaintyConfig | None:
         min_native_observations=int(raw.get("min_native_observations", 8)),
         min_frames=int(raw.get("min_frames", 1)),
         phone_bands=bands,
+        wide_band_score_phones=frozenset(
+            _phone_base(str(p)) for p in raw.get("wide_band_score_phones", [])
+        ),
     )
 
 

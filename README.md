@@ -113,7 +113,7 @@ jingo scores at the **phoneme** level and rolls up to a single 0–100 number.
    bite harder, this is the place to change the aggregation (e.g. penalize the
    worst phoneme, or use a low percentile instead of the mean).
 
-### Current curve — **STRICT** (`midpoint −2.0, slope 1.5`, `v1.2-strict-2026.07`)
+### Current curve — **STRICT** (`midpoint −2.0, slope 1.5`, `v1.3-strict-rr-2026.09`)
 
 | Sound quality | GOP ratio | Score |
 |---|---|---|
@@ -147,6 +147,10 @@ container — a plain restart is not enough.
 - **`uncertainty`** — shadow split-conformal confidence bands per phoneme; a
   conservative *abstain* recommendation the UI can honor, not an automatic score
   change.
+  **`wide_band_score_phones: ["r"]`** explicitly enables numeric rolled-R scores
+  and includes them in aggregates despite their wide confidence band. The band
+  remains unchanged and scores remain provisional. Quarantined or unaligned
+  sounds still abstain. Remove `"r"` from this list to restore the prior policy.
 
 ### Feedback display (in ADAPT's UI)
 

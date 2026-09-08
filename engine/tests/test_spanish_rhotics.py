@@ -46,6 +46,18 @@ def test_intervocalic_tap_trill_contrast_preserved(target, heard):
     assert result["phoneme_scores"][1]["score"] < 10
 
 
+@pytest.mark.parametrize("heard,expected", [("r", 100), ("ɾ", 0)])
+def test_rolled_r_is_scored_and_counts_in_overall(heard, expected):
+    result = score(["e", "r", "o"], ["e", heard, "o"])
+    rr = result["phoneme_scores"][1]
+    assert rr["score"] == expected
+    assert rr["abstain"] is False
+    assert rr["uncertainty"]["band"] == 78
+    assert result["overall"] == round((200 + expected) / 3, 1)
+    assert result["word_scores"][0]["score"] == result["overall"]
+    assert result["provisional"] is True
+
+
 @pytest.mark.parametrize("lang", ["fr", "en", None])
 def test_rule_requires_spanish_record(lang):
     result = score(["a", "ɾ", "s", "e"], ["a", "r", "s", "e"], lang=lang)
