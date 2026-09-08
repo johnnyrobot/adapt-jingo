@@ -1,6 +1,6 @@
 # jingo — pronunciation scorer service
 
-Thin FastAPI adapter around `jingo_engine` (johnnylingo-jingo 0.2.1). Scores
+Thin FastAPI adapter around `jingo_engine` (johnnylingo-jingo 0.2.2). Scores
 pronunciation attempts and returns signed answerJWTs to ADAPT via the WeBWorK
 JWT gradeback path.
 

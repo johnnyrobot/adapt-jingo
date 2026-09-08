@@ -106,6 +106,15 @@ drills that target this contrast (see `es-u1-l2` in `build_pack.py`) rely on
 G2P correctly emitting `ɾ` vs `r` for the two target strings — don't assume
 they're interchangeable when writing new prompts.
 
+For Spanish records (`lang: "es"`), engine 0.2.2 accepts acoustic tap or trill
+evidence for a reference tap **before a consonant within the same word**, such
+as the R in `calmarse` or the two taps in `divertirse`. This coda variation does
+not erase the intervocalic contrast above. Keep the G2P reference phones and
+word spans intact; do not replace every tap with a trill or add a global
+tap/trill equivalence class. Missing language or word spans disable this rule.
+
+Linguistic basis: [A stochastic approach to rhotic variation in Spanish codas](https://loquens.revistas.csic.es/index.php/loquens/article/view/20).
+
 ## Re-importing after edits
 
 There is no instructor-facing "add a word" UI today (see the pronunciation

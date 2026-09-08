@@ -43,6 +43,26 @@ except ImportError:  # pragma: no cover
 BLANK_ID = 0
 SAMPLE_RATE = 16000
 
+# A following consonant within the same Spanish word puts a tap in a coda,
+# where tap/trill variation is noncontrastive (e.g. calmarse, divertirse).
+# Do not merge rhotics globally: pero/perro and onset clusters remain distinct.
+_SPANISH_CONSONANTS = frozenset({
+    "p", "b", "β", "t", "d", "ð", "k", "ɡ", "ɣ", "f", "θ", "s", "z",
+    "x", "h", "tʃ", "ʝ", "ʎ", "m", "n", "ɲ", "ŋ", "l",
+})
+
+
+def _spanish_preconsonantal_tap(record: dict[str, Any], index: int) -> bool:
+    phones = record["phones"]
+    if record.get("lang") != "es" or _base(phones[index]) != "ɾ":
+        return False
+    if index + 1 >= len(phones) or _base(phones[index + 1]) not in _SPANISH_CONSONANTS:
+        return False
+    return any(
+        w.get("start", 0) <= index and index + 1 < w.get("start", 0) + w.get("len", 0)
+        for w in record.get("words", [])
+    )
+
 # Scoring knobs come from the versioned calibration asset (single source of
 # truth; see calibration.py). The module-level names are kept for backward
 # compatibility with existing scripts/tests that import them.
@@ -195,6 +215,8 @@ class GopScorer:
         self._model = ctranslate2.models.Wav2Vec2(ct2_model_dir, device=device,
                                                    compute_type=compute_type)
         self._groups = _variant_groups(vocab_path)
+        with open(vocab_path) as f:
+            self._vocab = json.load(f)
 
     def _frame_logprobs(self, wav_path: str) -> tuple[np.ndarray, float]:
         audio = load_wav_16k_mono(wav_path)
@@ -202,8 +224,13 @@ class GopScorer:
         out = self._model.encode(ctranslate2.StorageView.from_array(feats), to_cpu=True)
         return log_softmax(np.array(out)[0]), len(audio) / SAMPLE_RATE
 
-    def _phone_logp(self, logp: np.ndarray, phone_id: int) -> np.ndarray:
+    def _phone_logp(self, logp: np.ndarray, phone_id: int,
+                    alternative_id: int | None = None) -> np.ndarray:
         grp = self._groups.get(phone_id)
+        if alternative_id is not None:
+            grp = tuple(sorted(set(grp or (phone_id,)) | set(
+                self._groups.get(alternative_id, (alternative_id,))
+            )))
         if not grp:
             return logp[:, phone_id]
         sub = logp[:, list(grp)]
@@ -264,7 +291,11 @@ class GopScorer:
 
         scores: list[PhonemeScore] = []
         for i, pid in enumerate(ids):
-            plp = self._phone_logp(logp, pid)
+            alternative_id = (
+                self._vocab.get("r") if _spanish_preconsonantal_tap(phonetics, i)
+                else None
+            )
+            plp = self._phone_logp(logp, pid, alternative_id)
             frames = np.where(frame_phone == i)[0]
             if len(frames) == 0:
                 # Whenever a valid CTC path exists, Viterbi assigns every

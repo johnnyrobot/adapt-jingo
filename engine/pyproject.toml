@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "johnnylingo-jingo"
-version = "0.2.1"
+version = "0.2.2"
 description = "Portable per-phoneme pronunciation-scoring engine (GOP over a CTranslate2 wav2vec2 phone-CTC model). Torch-free at runtime."
 readme = "README.md"
 requires-python = ">=3.10"

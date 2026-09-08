@@ -31,7 +31,7 @@ from typing import Any, Protocol, runtime_checkable
 
 from .calibration import DEFAULT_CALIBRATION_PATH, DEFAULT_VOCAB_PATH, Calibration, load_calibration
 
-ENGINE_VERSION = "0.2.1"
+ENGINE_VERSION = "0.2.2"
 CONTRACT_VERSION = "1.1"
 
 MODEL_FILES = ("model.bin", "config.json", "vocabulary.json")
