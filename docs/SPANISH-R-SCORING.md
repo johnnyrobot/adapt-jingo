@@ -103,7 +103,7 @@ The reference records and ADAPT UI do not need to change for these six words.
 
 ## Deployment record
 
-- Fix commit: `2c1342e` on `johnnylibretexts/adapt-jingo` main.
+- Fix commit: `2c1342e` on `johnnylibretexts-ai/adapt-jingo` main.
 - Running engine and installed package: `0.2.2`.
 - Release image: `jingo:release-2c1342e`, also tagged `jingo:local`.
 - Running image ID: `sha256:274355b1e6496d19a6cf1efed930f53a4c779cda41ec029851c3a0c250bbb4e6`.
