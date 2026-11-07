@@ -9,12 +9,14 @@ permissions:
   contents: read
 
 concurrency:
-  group: tests-${{ github.ref }}
+  # A newer push cancels a PR's older run; each push to main gets its own
+  # group (its sha), so every main commit keeps a result.
+  group: tests-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
   cancel-in-progress: true
 
 # Each part runs in its own environment: service pins fastapi 0.110.0 and
 # tts pins 0.111.0, so they can't share one. No secrets, no model downloads:
-# the suites use fixtures and mocks.
+# the suites use fixtures and mocks. pytest is pinned to tts's 8.2.0 everywhere.
 jobs:
   engine:
     runs-on: ubuntu-latest
@@ -26,7 +28,7 @@ jobs:
           python-version: "3.12"
           cache: pip
           cache-dependency-path: engine/pyproject.toml
-      - run: pip install ./engine pytest
+      - run: pip install ./engine pytest==8.2.0
       - run: python -m pytest -v
         working-directory: engine
 
@@ -42,9 +44,10 @@ jobs:
           cache-dependency-path: |
             engine/pyproject.toml
             service/requirements.txt
-      # The upload test runs a real ffmpeg transcode, as the service image does.
+      # test_audio.py::test_normalize_produces_16k_mono_s16 runs a real ffmpeg
+      # transcode, as the service image does.
       - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
-      - run: pip install ./engine -r service/requirements.txt pytest
+      - run: pip install ./engine -r service/requirements.txt pytest==8.2.0
       - run: python -m pytest -v
         working-directory: service
 
