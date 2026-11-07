@@ -25,8 +25,8 @@ calls the [`tts/`](../tts/) service directly with the question's target word:
 
 ```
  PronunciationQuestion.vue ──GET /say?text=<word>&lang=<code>──▶ jingo-tts (Kokoro)
-        ▲                                                              │
-        └───────  audio/mpeg (cached per engine, voice, language and text)  ◀─┘
+        ▲                                                            │
+        └───  audio/mpeg, cached (see tts/README.md)  ──────────────◀┘
 ```
 
 This path never touches the gradebook, object storage, or the JWT contract — it is a
@@ -36,57 +36,57 @@ click is instant, and the service caches every clip to disk. See [`../tts/README
 ## End-to-end data flow
 
 ```
- ┌─────────────────────────┐
- │        Student           │
- │   (browser, ADAPT SPA)   │
- └────────────┬─────────────┘
-              │ 1. records audio in PronunciationQuestion.vue
-              │    - energy-based VAD auto-stops the recording
-              │    - client-side lamejs encodes PCM -> audio/mpeg (mp3)
-              │      (ADAPT's upload endpoint only accepts audio/mpeg)
-              │    - student presses explicit Submit
-              ▼
- ┌─────────────────────────┐
- │   ADAPT backend          │
- │  POST /api/submission-   │ 2. mp3 bytes uploaded, stored in object
- │  audios                  │    storage; ADAPT gets back a fetchable
- └────────────┬─────────────┘    audio_url (e.g. a MinIO object URL)
-              │
-              │ 3. ADAPT renders the question with a problemJWT
-              │    (exercise_id, language, grading mode) and the
-              │    scorer's URL (window.config.pronunciationServiceUrl);
-              │    the student's browser calls the scorer directly
-              ▼
- ┌─────────────────────────┐
- │   jingo service           │
- │  POST /score              │ 4. fetches the mp3 from object storage
- │  (service/app/main.py)    │    (server-side, over ADAPT's own docker
- └────────────┬─────────────┘    network — see Guardrails below)
-              │
-              │ 5. ffmpeg normalizes the audio to 16 kHz mono WAV
-              ▼
- ┌─────────────────────────┐
- │   jingo_engine             │ 6. transcribes phonemes (GOP over a
- │  (engine/, CT2 wav2vec2)   │    CTranslate2-exported wav2vec2 phoneme
- └────────────┬─────────────┘    model) and compares against the
-              │                  exercise's reference phoneme record
-              │
-              │ 7. returns to the browser:
-              │      - answerJWT: minimal, signed (WEBWORK_JWT_SECRET)
-              │      - feedback.phoneme_scores: richer, unsigned,
-              │        display-only per-phoneme breakdown
-              ▼
- ┌─────────────────────────┐
+ ┌───────────────────────────┐
+ │        Student            │
+ │   (browser, ADAPT SPA)    │
+ └─────────────┬─────────────┘
+               │ 1. records audio in PronunciationQuestion.vue
+               │    - energy-based VAD auto-stops the recording
+               │    - client-side lamejs encodes PCM -> audio/mpeg (mp3)
+               │      (ADAPT's upload endpoint only accepts audio/mpeg)
+               │    - student presses explicit Submit
+               ▼
+ ┌───────────────────────────┐
+ │   ADAPT backend           │ 2. mp3 bytes uploaded, stored in object
+ │  POST /api/submission-    │    storage; ADAPT gets back a fetchable
+ │  audios                   │    audio_url (e.g. a MinIO object URL)
+ └─────────────┬─────────────┘
+               │
+               │ 3. the page already carries a problemJWT (standard
+               │    ADAPT claims), the exercise_id and language from
+               │    pronunciation_data, and the scorer's URL
+               │    (window.config.pronunciationServiceUrl); the
+               │    student's browser calls the scorer directly
+               ▼
+ ┌───────────────────────────┐
+ │   jingo service           │ 4. fetches the mp3 from object storage
+ │  POST /score              │    (server-side, over ADAPT's own docker
+ │  (service/app/main.py)    │    network — see Guardrails below)
+ └─────────────┬─────────────┘
+               │
+               │ 5. ffmpeg normalizes the audio to 16 kHz mono WAV
+               ▼
+ ┌───────────────────────────┐
+ │   jingo_engine            │ 6. transcribes phonemes (GOP over a
+ │  (engine/, CT2 wav2vec2)  │    CTranslate2-exported wav2vec2 phoneme
+ └─────────────┬─────────────┘    model) and compares against the
+               │                  exercise's reference phoneme record
+               │
+               │ 7. returns to the browser:
+               │      - answerJWT: minimal, signed (WEBWORK_JWT_SECRET)
+               │      - feedback.phoneme_scores: richer, unsigned,
+               │        display-only per-phoneme breakdown
+               ▼
+ ┌───────────────────────────┐
  │   Student's browser       │ 8. renders per-phoneme chips from
  │  (PronunciationQuestion)  │    feedback.phoneme_scores, then posts
- └────────────┬─────────────┘    the answerJWT, unchanged, to ADAPT
-              │
-              ▼
- ┌─────────────────────────┐
- │   ADAPT backend           │
- │  POST /api/jwt/process-   │ 9. verifies the answerJWT signature and
- │  answer-jwt                │    records the grade in the gradebook
- └─────────────────────────┘
+ └─────────────┬─────────────┘    the answerJWT, unchanged, to ADAPT
+               ▼
+ ┌───────────────────────────┐
+ │   ADAPT backend           │ 9. verifies the answerJWT signature and
+ │  POST /api/jwt/process-   │    records the grade in the gradebook
+ │  answer-jwt               │
+ └───────────────────────────┘
 ```
 
 Because the browser calls `/score`, the scorer needs a URL the student's
@@ -151,9 +151,12 @@ purposes:
   [`docs/DEPLOYMENT.md`](DEPLOYMENT.md#security-considerations) for handling
   it as a secret.
 - **Grading defaults to `completion`, not `score`.** Each drill in a
-  language pack declares its grading (`completion` unless the pack says
-  otherwise), and a pack's exam section can opt its questions into
-  phoneme-based `score` grading; the out-of-the-box behavior is credit for a valid, reachable submission. This
+  language pack declares its grading (`completion` unless the drill says
+  `score`), stored on the question's `pronunciation_data`. ADAPT applies it
+  when it records the grade (`Submission.php`): score-based credit only when
+  the drill says `score` and the scorer returned `scored`, completion credit
+  otherwise. An exam section can't override a drill's grading yet. The
+  out-of-the-box behavior is credit for a valid, reachable submission. This
   keeps the (explicitly provisional — see the repo
   [README](../README.md#accuracy-disclaimer)) GOP score from being used as a
   high-stakes grade by default.
