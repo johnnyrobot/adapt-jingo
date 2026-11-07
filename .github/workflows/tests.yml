@@ -1,0 +1,63 @@
+name: tests
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+# Each part runs in its own environment: service pins fastapi 0.110.0 and
+# tts pins 0.111.0, so they can't share one. No secrets, no model downloads:
+# the suites use fixtures and mocks.
+jobs:
+  engine:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: engine/pyproject.toml
+      - run: pip install ./engine pytest
+      - run: python -m pytest -v
+        working-directory: engine
+
+  service:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            engine/pyproject.toml
+            service/requirements.txt
+      # The upload test runs a real ffmpeg transcode, as the service image does.
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
+      - run: pip install ./engine -r service/requirements.txt pytest
+      - run: python -m pytest -v
+        working-directory: service
+
+  tts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: tts/requirements*.txt
+      - run: pip install -r tts/requirements-dev.txt
+      - run: python -m pytest -v
+        working-directory: tts
