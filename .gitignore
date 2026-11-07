@@ -8,3 +8,5 @@ model/*/
 engine/dist/
 *.egg-info/
 .superpowers/
+# never commit deploy secrets (WEBWORK_JWT_SECRET, AWS keys); see docs/DEPLOYMENT.md
+.env

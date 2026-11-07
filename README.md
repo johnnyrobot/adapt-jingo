@@ -10,7 +10,7 @@ walkthrough is [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
 reference pronunciation at the phoneme level and reports the result back to ADAPT's
 gradebook.
 
-This repository packages jingo as four independent, MIT-licensed parts:
+This repository packages jingo as five independent, MIT-licensed parts:
 
 | Part | What it is |
 |---|---|
@@ -28,7 +28,7 @@ uses `engine/` to score the submitted audio's phonemes against the question's re
 pronunciation. The service returns a score and a per-phoneme breakdown, which ADAPT signs
 into an answer JWT and posts back into its own gradebook. See
 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the full diagram and component
-responsibilities. *(Added in a later phase of this repo.)*
+responsibilities.
 
 ## "Hear it" exemplar audio (optional)
 
@@ -187,6 +187,6 @@ standardized benchmark.
 
 ## License
 
-MIT — see [`LICENSE`](LICENSE). This covers all four parts of this repository, including the
+MIT — see [`LICENSE`](LICENSE). This covers all five parts of this repository, including the
 engine (whose scoring approach is relicensed under MIT for this project). The wav2vec2 model
 itself is separately licensed (Apache-2.0) and is not distributed here.
