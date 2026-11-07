@@ -23,10 +23,11 @@ This repository packages jingo as five independent, MIT-licensed parts:
 ## Architecture
 
 Student records audio in ADAPT's `pronunciation` question type. The audio is uploaded to
-object storage (e.g. MinIO). ADAPT then calls the jingo `service/` `/score` endpoint, which
-uses `engine/` to score the submitted audio's phonemes against the question's reference
-pronunciation. The service returns a score and a per-phoneme breakdown, which ADAPT signs
-into an answer JWT and posts back into its own gradebook. See
+object storage (e.g. MinIO). The student's browser then calls the jingo `service/` `/score`
+endpoint, which uses `engine/` to score the submitted audio's phonemes against the question's
+reference pronunciation. The service returns a per-phoneme breakdown for display and a score
+signed into an answer JWT, which the browser posts to ADAPT; ADAPT verifies it and records
+the grade. See
 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the full diagram and component
 responsibilities.
 
@@ -81,8 +82,9 @@ Amazon Polly TTS voice is the one opt-in exception, and the default TTS engine i
 **You do not need any private fork** — `adapt-integration/` applies onto upstream ADAPT
 (`git am -3` if your tree has diverged). This repo is the single, self-contained source.
 
-See [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) for the full stand-up walkthrough (service,
-model, language pack, ADAPT wiring).
+See [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) for the full service stand-up walkthrough (model,
+records, network, proxy, smoke tests) and [`DEPLOY.md`](DEPLOY.md) for the language pack and
+ADAPT wiring.
 
 ## Model
 

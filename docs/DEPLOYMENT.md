@@ -38,14 +38,16 @@ At the end of this step you should have a directory such as:
 `service/records/` (or your own copy) holds the per-exercise phonetics
 records and tag maps the engine scores against — this is provider data, not
 secret, but it's specific to the language packs you've imported in ADAPT
-(e.g. `es/`, `fr/` subdirectories, plus `tag_map/<language>.json`). Copy or
+(e.g. `es/`, `fr/` subdirectories, plus an optional
+`tag_map/<language>.json` that a language-pack import writes only when the
+pack has one; the service treats a missing tag map as empty). Copy or
 mount the records tree onto the deploy host, e.g.:
 
 ```
 /opt/libretexts/jingo/records/
 ├── es/
 ├── fr/
-└── tag_map/
+└── tag_map/        (optional)
 ```
 
 Next to your compose file, create a `.env` (never committed — the repo's
@@ -59,9 +61,9 @@ WEBWORK_JWT_SECRET=<same value as ADAPT's WEBWORK_JWT_SECRET>
 `WEBWORK_JWT_SECRET` must be the **exact same value** ADAPT uses for its own
 WeBWorK gradeback JWT signing — jingo's `answerJWT` is verified by ADAPT
 using that shared secret (`service/app/jwt_util.py`). Read the value out of
-ADAPT's live `.env` on your box; don't invent a new one.
+ADAPT's existing `.env`; don't invent a new one.
 
-The other `JINGO_*` environment variables the service reads
+Environment variables the service reads
 (`service/app/config.py`, `service/app/audio.py`, `service/app/jwt_util.py`):
 
 | Variable | Required | Default | Purpose |
@@ -69,7 +71,7 @@ The other `JINGO_*` environment variables the service reads
 | `JINGO_ENGINE_MODEL_DIR` | yes | — | Path (inside the container) to the CT2 model directory from step 1 |
 | `WEBWORK_JWT_SECRET` | yes | — | Shared HS256 secret for signing `answerJWT`, verified by ADAPT |
 | `JINGO_RECORDS_DIR` | no | `/opt/libretexts/jingo/records` | Path (inside the container) to the records tree from above |
-| `JINGO_ALLOWED_ORIGIN` | no | `https://adapt.example.org` | CORS origin allowed to call `/score` — set to your ADAPT origin |
+| `JINGO_ALLOWED_ORIGIN` | no | `https://adapt.example.org` | CORS origin allowed to call `/score` and `/practice-score` — set to your ADAPT origin |
 | `JINGO_ENGINE_MAX_AUDIO_SECONDS` | no | `20` | Reject/trim attempts longer than this |
 | `JINGO_AUDIO_HOST_ALLOWLIST` | no | unset (allow any host) | Comma-separated hostnames the service is allowed to fetch audio from; see Security considerations |
 | `JINGO_ANSWER_JWT_TTL_SECONDS` | no | `3600` | `answerJWT` lifetime in seconds |
@@ -98,7 +100,9 @@ cd service
 cp docker-compose.example.yml docker-compose.yml
 ```
 
-Adjust the `environment:` block for your paths/origin, then:
+Point the host side of the `volumes:` entries at the model and records
+directories from steps 1–2 (the example mounts `./model` and `./records`
+relative to `service/`), set `JINGO_ALLOWED_ORIGIN` in `environment:`, then:
 
 ```bash
 docker compose up -d
@@ -124,7 +128,7 @@ that skips it, or an override compose file that drops the network list — the
 symptom is **not** a crash:
 
 - `/health` still reports `engine_available: true` (the model loaded fine).
-- `/score` requests return normally with `status: "audio_unreachable"`, and
+- `/score` requests return normally with `feedback.status: "audio_unreachable"`, and
   the service falls back to completion credit.
 - ADAPT's gradebook looks populated and correct at a glance — the student
   gets credit — but no actual phoneme scoring happened.
@@ -155,7 +159,8 @@ URL to the jingo vhost from step 6, e.g. `https://jingo.example.org`.
 
 Set `JINGO_ALLOWED_ORIGIN` on the jingo side to ADAPT's own public origin
 (e.g. `https://adapt.example.org`) — the FastAPI CORS middleware
-(`service/app/main.py`) only allows browser calls to `/score` from that
+(`service/app/main.py`) only allows browser calls to `/score` and
+`/practice-score` from that
 origin. A mismatch here shows up as a CORS rejection in the student's
 browser console, not a server-side error.
 
@@ -171,8 +176,9 @@ browser console, not a server-side error.
   hard-reload.
 - If you **decommission the old scorer host** (e.g. rename `pron`→`jingo`), a
   stale tab still posts `/score` to the dead host; that fetch throws in the
-  browser and ADAPT silently falls back to **completion credit** — it *looks*
-  like scoring "works" but nothing is ever scored. Symptom: uploads succeed
+  browser, which tells the student they will get completion credit but posts
+  **no grade** — the uploaded audio is all that is recorded, for an
+  instructor to resolve. Symptom: uploads succeed
   (`POST /api/submission-audios/... 200`) but the scorer's access log shows no
   `/score` hits. Fix = hard-reload the tab.
 
@@ -217,9 +223,9 @@ curl -s -X POST https://jingo.example.org/score \
   }' | jq .
 ```
 
-A healthy response returns `status: "scored"` with an `overall` score, a
-`phoneme_scores` breakdown in `feedback`, and a signed `answerJWT`. Any other
-`status` value (`engine_unavailable`, `provider_miss`, `audio_unreachable`,
+A healthy response returns a signed `answerJWT` and a `feedback` object
+with `status: "scored"`, an `overall` score and a `phoneme_scores`
+breakdown. Any other `feedback.status` value (`engine_unavailable`, `provider_miss`, `audio_unreachable`,
 `unscoreable`) tells you which stage failed — see `service/app/main.py` and
 `service/README.md` for what each one means. `provider_miss` on a real
 `exercise_id` usually means the records tree from step 2 wasn't mounted or
@@ -247,6 +253,11 @@ is missing that language's directory.
   being joined into a filesystem path under `JINGO_RECORDS_DIR`
   (`service/app/provider.py`). Don't bypass this by constructing records
   paths yourself outside the provider.
+- **`/practice-score` needs no login.** It scores inline audio for ungraded
+  practice and returns feedback only (no `answerJWT`, nothing stored). It is
+  bounded by `JINGO_MAX_UPLOAD_BYTES` and a per-client-IP rate limit
+  (`JINGO_PRACTICE_RATE_MAX` per `JINGO_PRACTICE_RATE_WINDOW_S`); tighten
+  those if it is abused.
 - **Keep `WEBWORK_JWT_SECRET` out of version control.** It's read from
   `.env` (gitignored) and must match ADAPT's own value exactly. Don't put it
   in this repo, in CI config, or in any doc — reference the variable name

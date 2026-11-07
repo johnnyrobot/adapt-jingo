@@ -12,7 +12,7 @@ scoring.
 | `PronunciationQuestion.vue` | ADAPT (patched in via [`adapt-integration/`](../adapt-integration/)) | Browser-side recorder + question UI |
 | ADAPT backend | ADAPT (patched in via `adapt-integration/`) | Owns the assignment, the gradebook, and the JWT contract |
 | Object storage (e.g. MinIO) | ADAPT's own deployment | Holds the uploaded audio |
-| `service/` (jingo) | this repo | FastAPI `/score` endpoint — the network-facing scoring component |
+| `service/` (jingo) | this repo | FastAPI `/score` endpoint (and the login-free `/practice-score`) — the network-facing scoring component |
 | `engine/` (`jingo_engine`) | this repo | GOP scoring library used by `service/`; no network I/O of its own |
 | `tts/` (`jingo-tts`) | this repo | Optional FastAPI `/say` endpoint (pluggable engine, default Kokoro-82M) for the "Hear it" exemplar button; independent of the scoring path |
 
@@ -21,12 +21,12 @@ scoring.
 Separate from scoring, ADAPT can offer a **🔊 Hear it** button that plays a model
 pronunciation of the prompt. When `PronunciationQuestion.vue` is given a `ttsUrl`
 (from ADAPT's `PRONUNCIATION_TTS_URL` → `window.config.pronunciationTtsUrl`), it
-calls the [`tts/`](../tts/) service directly:
+calls the [`tts/`](../tts/) service directly with the question's target word:
 
 ```
- PronunciationQuestion.vue ──GET /say?text=<prompt>&lang=<code>──▶ jingo-tts (Kokoro)
+ PronunciationQuestion.vue ──GET /say?text=<word>&lang=<code>──▶ jingo-tts (Kokoro)
         ▲                                                              │
-        └──────────────────  audio/mpeg (cached per voice+text)  ◀─────┘
+        └───────  audio/mpeg (cached per engine, voice, language and text)  ◀─┘
 ```
 
 This path never touches the gradebook, object storage, or the JWT contract — it is a
@@ -52,8 +52,10 @@ click is instant, and the service caches every clip to disk. See [`../tts/README
  │  audios                  │    storage; ADAPT gets back a fetchable
  └────────────┬─────────────┘    audio_url (e.g. a MinIO object URL)
               │
-              │ 3. ADAPT builds a problemJWT (exercise_id, language,
-              │    grading mode) and calls the scorer
+              │ 3. ADAPT renders the question with a problemJWT
+              │    (exercise_id, language, grading mode) and the
+              │    scorer's URL (window.config.pronunciationServiceUrl);
+              │    the student's browser calls the scorer directly
               ▼
  ┌─────────────────────────┐
  │   jingo service           │
@@ -69,24 +71,33 @@ click is instant, and the service caches every clip to disk. See [`../tts/README
  └────────────┬─────────────┘    model) and compares against the
               │                  exercise's reference phoneme record
               │
-              │ 7. returns:
+              │ 7. returns to the browser:
               │      - answerJWT: minimal, signed (WEBWORK_JWT_SECRET)
               │      - feedback.phoneme_scores: richer, unsigned,
               │        display-only per-phoneme breakdown
               ▼
  ┌─────────────────────────┐
- │   ADAPT backend           │
- │  POST /api/jwt/process-   │ 8. verifies answerJWT signature, records
- │  answer-jwt                │    the grade
- └────────────┬─────────────┘
+ │   Student's browser       │ 8. renders per-phoneme chips from
+ │  (PronunciationQuestion)  │    feedback.phoneme_scores, then posts
+ └────────────┬─────────────┘    the answerJWT, unchanged, to ADAPT
               │
               ▼
  ┌─────────────────────────┐
- │   Gradebook                │ 9. submission stored; student sees
- │                             │    per-phoneme chips rendered client-side
- └─────────────────────────┘    from feedback.phoneme_scores (step 7),
-                                  not from anything re-fetched from jingo
+ │   ADAPT backend           │
+ │  POST /api/jwt/process-   │ 9. verifies the answerJWT signature and
+ │  answer-jwt                │    records the grade in the gradebook
+ └─────────────────────────┘
 ```
+
+Because the browser calls `/score`, the scorer needs a URL the student's
+browser can reach and a CORS origin that matches ADAPT's
+(`JINGO_ALLOWED_ORIGIN`); see [`docs/DEPLOYMENT.md`](DEPLOYMENT.md) step 7.
+
+**Practice mode:** an ungraded practice attempt skips object storage and the
+gradebook entirely. The browser posts the mp3 straight to the login-free
+`POST /practice-score`, which returns the feedback object only (no
+`answerJWT`). It is bounded by `JINGO_MAX_UPLOAD_BYTES` and a per-IP rate
+limit.
 
 **Instructor preview:** the same `<pronunciation-question>` widget also renders
 for instructors (`user.role === 2`) in the question preview, but with a
@@ -122,7 +133,7 @@ purposes:
   repo's deployment docs, that's `adapt_adapt`, ADAPT's default network name;
   substitute your own if you deploy differently). If it isn't, step 4 above
   fails, but **not loudly**: `/health` still reports `engine_available: true`
-  because the model loaded fine, and `/score` returns `status:
+  because the model loaded fine, and `/score` returns `feedback.status:
   "audio_unreachable"`. The service then falls back to completion credit — the
   gradebook looks populated and correct at a glance, but no phoneme scoring
   actually ran. See [`docs/DEPLOYMENT.md`](DEPLOYMENT.md) for how to verify
@@ -139,9 +150,10 @@ purposes:
   Both sides must share the exact same `WEBWORK_JWT_SECRET` value; see
   [`docs/DEPLOYMENT.md`](DEPLOYMENT.md#security-considerations) for handling
   it as a secret.
-- **Grading defaults to `completion`, not `score`.** Per-assignment, an
-  instructor opts a pronunciation exercise into phoneme-based scoring; the
-  out-of-the-box behavior is credit for a valid, reachable submission. This
+- **Grading defaults to `completion`, not `score`.** Each drill in a
+  language pack declares its grading (`completion` unless the pack says
+  otherwise), and a pack's exam section can opt its questions into
+  phoneme-based `score` grading; the out-of-the-box behavior is credit for a valid, reachable submission. This
   keeps the (explicitly provisional — see the repo
   [README](../README.md#accuracy-disclaimer)) GOP score from being used as a
   high-stakes grade by default.
