@@ -154,8 +154,8 @@ purposes:
   language pack declares its grading (`completion` unless the drill says
   `score`), stored on the question's `pronunciation_data`. ADAPT applies it
   when it records the grade (`Submission.php`): score-based credit only when
-  the drill says `score` and the scorer returned `scored`, completion credit
-  otherwise. An exam section can't override a drill's grading yet. The
+  the drill says `score` and the scorer returned `scored` with an `overall`;
+  for any other signed answer that matches the question, completion credit. An exam section can't override a drill's grading yet. The
   out-of-the-box behavior is credit for a valid, reachable submission. This
   keeps the (explicitly provisional — see the repo
   [README](../README.md#accuracy-disclaimer)) GOP score from being used as a
