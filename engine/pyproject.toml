@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
 license-files = ["LICENSE", "NOTICE.md", "THIRD_PARTY_NOTICES.md"]
-authors = [{ name = "Johnny Robot" }]
+authors = [{ name = "LibreTexts" }]
 keywords = ["pronunciation", "language-learning", "gop", "wav2vec2", "ctranslate2"]
 dependencies = [
     "numpy>=1.24",
@@ -18,9 +18,9 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/johnnyrobot/johnny-lingo-v2"
-Documentation = "https://github.com/johnnyrobot/johnny-lingo-v2/blob/main/docs/jingo-engine-integration-guide.md"
-Source = "https://github.com/johnnyrobot/johnny-lingo-v2/tree/main/engine"
+Homepage = "https://github.com/johnnyrobot/adapt-jingo"
+Documentation = "https://github.com/johnnyrobot/adapt-jingo/blob/main/engine/README.md"
+Source = "https://github.com/johnnyrobot/adapt-jingo/tree/main/engine"
 
 [project.optional-dependencies]
 # Build-time G2P (GPL espeak toolchain - never shipped with a product):
