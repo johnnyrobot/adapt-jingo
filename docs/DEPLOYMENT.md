@@ -127,13 +127,14 @@ recreated without that network attached — e.g. a `docker run` invocation
 that skips it, or an override compose file that drops the network list — the
 symptom is **not** a crash:
 
-- `/health` still reports `engine_available: true` (the model loaded fine).
+- `/health` still reports `engine_available: true` (the model files are present).
 - `/score` requests return normally with `feedback.status: "audio_unreachable"`, and
   the service falls back to completion credit.
 - ADAPT's gradebook looks populated and correct at a glance — the student
   gets credit — but no actual phoneme scoring happened.
 
-If you see a run of `audio_unreachable` in the jingo logs, check
+If you see a run of `audio unreachable: ...` lines in the jingo logs (or
+`feedback.status: "audio_unreachable"` in `/score` responses), check
 `docker network inspect adapt_adapt` for the jingo container before anything
 else. Never recreate the `jingo` container detached from that network.
 
@@ -202,7 +203,9 @@ Expect:
 `engine_available: false` means the model directory in step 1 is missing or
 failed `jingo_engine` construction — check the container logs and re-run
 `jingo-engine-model verify --model-dir ...` from inside (or against) the
-mounted path.
+mounted path. `engine_available: true` only means the model files and
+vocabulary are present: the model itself loads on the first scoring request,
+so run the `/score` smoke test in step 9 to confirm scoring works.
 
 ## 9. Smoke test — `/score` round trip
 

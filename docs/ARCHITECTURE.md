@@ -128,13 +128,16 @@ purposes:
 
 ## Guardrails
 
-- **Network placement is load-bearing, not optional.** The jingo service must
-  be attached to the same docker network as ADAPT's object storage (in this
-  repo's deployment docs, that's `adapt_adapt`, ADAPT's default network name;
-  substitute your own if you deploy differently). If it isn't, step 4 above
-  fails, but **not loudly**: `/health` still reports `engine_available: true`
-  because the model loaded fine, and `/score` returns `feedback.status:
-  "audio_unreachable"`. The service then falls back to completion credit — the
+- **Network placement is load-bearing, not optional.** The jingo service
+  fetches `audio_url` over HTTP, so it must be able to reach ADAPT's object
+  storage at that URL. In this repo's example deployment storage is the
+  internal `minio` container, so jingo must join the same docker network
+  (`adapt_adapt`, ADAPT's default network name; substitute your own if you
+  deploy differently). A storage endpoint reachable from outside docker needs
+  no shared network. If jingo can't reach storage, step 4 above fails, but
+  **not loudly**: `/health` still reports `engine_available: true` (it only
+  checks that the model files are present), and `/score` returns
+  `feedback.status: "audio_unreachable"`. The service then falls back to completion credit — the
   gradebook looks populated and correct at a glance, but no phoneme scoring
   actually ran. See [`docs/DEPLOYMENT.md`](DEPLOYMENT.md) for how to verify
   network attachment.
@@ -155,7 +158,10 @@ purposes:
   `score`), stored on the question's `pronunciation_data`. ADAPT applies it
   when it records the grade (`Submission.php`): score-based credit only when
   the drill says `score` and the scorer returned `scored` with an `overall`;
-  for any other signed answer that matches the question, completion credit. An exam section can't override a drill's grading yet. The
+  for any other signed answer that matches the question, completion credit.
+  That proportion reaches the gradebook only when the assignment itself is
+  scored for performance (`scoring_type` `p`); a completion-scored assignment
+  gives completion credit whatever the drill says. An exam section can't override a drill's grading yet. The
   out-of-the-box behavior is credit for a valid, reachable submission. This
   keeps the (explicitly provisional — see the repo
   [README](../README.md#accuracy-disclaimer)) GOP score from being used as a
